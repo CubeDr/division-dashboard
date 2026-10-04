@@ -3,7 +3,6 @@ import { Calendar, FileSpreadsheet, AlertCircle, Info } from 'lucide-react';
 
 interface HeaderProps {
   referenceDate: string;
-  onReferenceDateChange: (newDate: string) => void;
   privateCount: number;
   activeTab: 'overview' | 'regional' | 'participation' | 'raw';
   onTabChange: (tab: 'overview' | 'regional' | 'participation' | 'raw') => void;
@@ -11,7 +10,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   referenceDate,
-  onReferenceDateChange,
   privateCount,
   activeTab,
   onTabChange
@@ -42,16 +40,10 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Right Status Meta info (PDF Header Spec) */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            {/* 기준일 Selector */}
+            {/* 기준일 (고정 표기) */}
             <div className="flex items-center bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 shadow-sm">
               <Calendar className="w-3.5 h-3.5 text-blue-400 mr-1.5" />
-              <span className="text-slate-400 mr-1.5 font-medium">기준일</span>
-              <input
-                type="date"
-                value={referenceDate}
-                onChange={(e) => onReferenceDateChange(e.target.value)}
-                className="bg-transparent text-white font-semibold text-xs border-none outline-none focus:ring-1 focus:ring-blue-500 rounded cursor-pointer"
-              />
+              <span>기준일 <strong className="text-white font-semibold">{referenceDate}</strong></span>
             </div>
 
             {/* 비공개 제외 뱃지 */}

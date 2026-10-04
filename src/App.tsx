@@ -10,7 +10,7 @@ import { Tournament, PlayerRank, LeagueName } from './types/dashboard';
 export default function App() {
   const [tournaments] = useState<Tournament[]>(initialData.tournaments as Tournament[]);
   const [players] = useState<PlayerRank[]>(initialData.players as PlayerRank[]);
-  const [referenceDate, setReferenceDate] = useState<string>('2026-09-18');
+  const referenceDate = '2026-09-18';
   const [selectedLeague, setSelectedLeague] = useState<LeagueName>('성인부리그');
   const [activeTab, setActiveTab] = useState<'overview' | 'regional' | 'participation' | 'raw'>('overview');
 
@@ -22,7 +22,6 @@ export default function App() {
       {/* 헤더 네비게이션 */}
       <Header
         referenceDate={referenceDate}
-        onReferenceDateChange={setReferenceDate}
         privateCount={privateCount}
         activeTab={activeTab}
         onTabChange={setActiveTab}
