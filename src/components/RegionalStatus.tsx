@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  MapPin,
   Calendar,
   AlertTriangle,
   CheckCircle,
-  HelpCircle,
   Trophy,
-  ArrowLeft,
-  Users
+  Users,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import {
   Tournament,
@@ -71,27 +71,112 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
     // 리그 바꾸면 대회 구조가 달라지므로 최상위로 리셋하거나 유지
   };
 
+  // 정렬 상태 관리
+  type SortKey = 'name' | 'total' | 'completed' | 'uncompleted' | 'rate' | 'status';
+  type SortDirection = 'asc' | 'desc';
+
+  const [sortKey, setSortKey] = useState<SortKey>('rate');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDirection(key === 'name' ? 'asc' : 'desc');
+    }
+  };
+
+  const sortedSidoStats = useMemo(() => {
+    return [...sidoStats].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') {
+        cmp = a.sido.localeCompare(b.sido, 'ko');
+      } else if (sortKey === 'status') {
+        cmp = a.status.localeCompare(b.status, 'ko');
+      } else {
+        cmp = (a[sortKey] ?? 0) - (b[sortKey] ?? 0);
+      }
+      if (cmp === 0) {
+        cmp = a.sido.localeCompare(b.sido, 'ko');
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [sidoStats, sortKey, sortDirection]);
+
+  const sortedSggStats = useMemo(() => {
+    return [...sggStats].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') {
+        cmp = a.sgg.localeCompare(b.sgg, 'ko');
+      } else if (sortKey === 'status') {
+        cmp = a.status.localeCompare(b.status, 'ko');
+      } else {
+        cmp = (a[sortKey] ?? 0) - (b[sortKey] ?? 0);
+      }
+      if (cmp === 0) {
+        cmp = a.sgg.localeCompare(b.sgg, 'ko');
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [sggStats, sortKey, sortDirection]);
+
+  const renderSortableHeader = (
+    label: string,
+    key: SortKey,
+    align: 'left' | 'center' | 'right' = 'left',
+    extraClass: string = ''
+  ) => {
+    const isActive = sortKey === key;
+    return (
+      <th
+        onClick={() => handleSort(key)}
+        className={`py-2.5 sm:py-3 ${
+          align === 'center'
+            ? 'px-1 sm:px-3 text-center'
+            : align === 'right'
+            ? 'px-1 sm:px-4 text-right sm:text-left'
+            : 'px-2 sm:px-4 text-left'
+        } ${extraClass} cursor-pointer select-none hover:bg-slate-100 transition-colors group whitespace-nowrap`}
+      >
+        <div
+          className={`inline-flex items-center gap-0.5 sm:gap-1.5 ${
+            align === 'center'
+              ? 'justify-center'
+              : align === 'right'
+              ? 'justify-end sm:justify-start'
+              : ''
+          }`}
+        >
+          <span className={isActive ? 'text-blue-600 font-bold' : 'group-hover:text-slate-900'}>
+            {label}
+          </span>
+          <span className="inline-flex">
+            {isActive ? (
+              sortDirection === 'asc' ? (
+                <ArrowUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
+              ) : (
+                <ArrowDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
+              )
+            ) : (
+              <ArrowUpDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </span>
+        </div>
+      </th>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* 상단 컨트롤 및 안내 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-600" />
-            <span>지역별 운영 현황</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            전국 17개 시·도에서 시·군·구, 개별 대회까지 3단계 드릴다운으로 운영 실적과 확인필요 대회를 점검합니다.
-          </p>
-        </div>
-
-        {/* 리그 선택 탭 */}
-        <div className="flex bg-slate-100 p-1 rounded-lg text-xs font-semibold self-start sm:self-auto">
+      {/* 리그 선택 (가운데 정렬) */}
+      <div className="flex justify-center">
+        <div className="flex bg-slate-200/80 p-1 rounded-lg text-xs font-semibold">
           {(['성인부리그', '유청소년리그', '시니어리그'] as LeagueName[]).map((l) => (
             <button
               key={l}
               onClick={() => handleLeagueChange(l)}
-              className={`px-3 py-1.5 rounded-md transition ${
+              className={`px-3.5 py-1.5 rounded-md transition ${
                 selectedLeague === l
                   ? 'bg-white text-blue-600 shadow-sm font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -103,106 +188,92 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
         </div>
       </div>
 
-      {/* 브레드크럼 네비게이션 (전국 -> 시·도 -> 시·군·구) */}
-      <div className="flex items-center space-x-2 text-xs font-medium bg-slate-100/80 px-4 py-2.5 rounded-lg border border-slate-200">
-        <button
-          onClick={() => {
-            setSelectedSido(null);
-            setSelectedSgg(null);
-            setExpandedTournament(null);
-          }}
-          className={`hover:underline flex items-center gap-1 ${
-            !selectedSido ? 'text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <span>전국 전체 시·도</span>
-        </button>
-
-        {selectedSido && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+      {/* 표 컨테이너 (선택 hierarchy가 표의 제목) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* 표 제목: 선택 hierarchy 네비게이션 */}
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg font-bold">
             <button
+              type="button"
               onClick={() => {
+                setSelectedSido(null);
                 setSelectedSgg(null);
                 setExpandedTournament(null);
               }}
-              className={`hover:underline ${
-                !selectedSgg ? 'text-blue-700 font-bold' : 'text-slate-500 hover:text-slate-800'
+              className={`transition ${
+                !selectedSido
+                  ? 'text-slate-900 cursor-default'
+                  : 'text-slate-400 hover:text-blue-600 cursor-pointer'
               }`}
             >
-              {selectedSido}
+              전국
             </button>
-          </>
-        )}
 
-        {selectedSgg && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-blue-700 font-bold">{selectedSgg} (대회 상세)</span>
-          </>
-        )}
-      </div>
+            {selectedSido && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSgg(null);
+                    setExpandedTournament(null);
+                  }}
+                  className={`transition ${
+                    !selectedSgg
+                      ? 'text-slate-900 cursor-default'
+                      : 'text-slate-400 hover:text-blue-600 cursor-pointer'
+                  }`}
+                >
+                  {selectedSido}
+                </button>
+              </>
+            )}
 
-      {/* 1단계: 시·도 목록 화면 */}
-      {!selectedSido && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">
-                전국 17개 시·도 운영 현황
-              </h3>
-              <span className="text-xs text-slate-500">
-                {selectedLeague} 기준 · {sidoStats.length}개 시·도 (행을 클릭하면 시·군·구 목록으로 이동합니다)
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                정상 진행
-              </span>
-              <span className="flex items-center gap-1 text-orange-700 font-medium bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />
-                확인 필요 (종료일 경과 미입력)
-              </span>
-            </div>
+            {selectedSgg && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-slate-900">{selectedSgg}</span>
+              </>
+            )}
           </div>
+        </div>
 
+        {/* 1단계: 시·도 목록 화면 */}
+        {!selectedSido && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">시·도</th>
-                  <th className="py-3 px-3 text-center">전체</th>
-                  <th className="py-3 px-3 text-center">완료</th>
-                  <th className="py-3 px-3 text-center">미완료</th>
-                  <th className="py-3 px-4 min-w-[200px]">진행률</th>
-                  <th className="py-3 px-4 text-center">상태</th>
-                  <th className="py-3 px-3 text-center">이동</th>
+                  {renderSortableHeader('시·도', 'name', 'left', 'pl-3.5 sm:pl-4')}
+                  {renderSortableHeader('전체', 'total', 'center')}
+                  {renderSortableHeader('완료', 'completed', 'center')}
+                  {renderSortableHeader('미완료', 'uncompleted', 'center')}
+                  {renderSortableHeader('진행률', 'rate', 'right', 'sm:min-w-[180px]')}
+                  {renderSortableHeader('상태', 'status', 'center', 'pr-3 sm:pr-4')}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sidoStats.map((item) => (
+                {sortedSidoStats.map((item) => (
                   <tr
                     key={item.sido}
                     onClick={() => setSelectedSido(item.sido)}
                     className="hover:bg-blue-50/60 cursor-pointer transition"
                   >
-                    <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-slate-300"></span>
-                      <span>{item.sido}</span>
+                    <td className="py-3 sm:py-3.5 pl-3.5 pr-2 sm:px-4 font-bold text-slate-900 whitespace-nowrap">
+                      {item.sido}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-semibold text-slate-700">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center font-semibold text-slate-700 whitespace-nowrap">
                       {item.total}
                     </td>
-                    <td className="py-3.5 px-3 text-center text-emerald-700 font-bold">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center text-emerald-700 font-bold whitespace-nowrap">
                       {item.completed}
                     </td>
-                    <td className="py-3.5 px-3 text-center text-slate-500 font-medium">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center text-slate-500 font-medium whitespace-nowrap">
                       {item.uncompleted}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-4 text-right sm:text-left whitespace-nowrap">
+                      <div className="flex items-center justify-end sm:justify-start gap-2">
+                        <div className="hidden sm:block flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
                           <div
                             className={`h-2 rounded-full ${
                               item.rate === 100
@@ -214,108 +285,73 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                             style={{ width: `${item.rate}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-700 w-12 text-right">
+                        <span className="text-xs font-bold text-slate-700 sm:w-12 text-right">
                           {item.rate}%
                         </span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3 sm:py-3.5 pl-1 pr-3 sm:px-4 text-center whitespace-nowrap">
                       {item.status === '확인 필요' ? (
-                        <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-orange-200 shadow-xs">
-                          <AlertTriangle className="w-3 h-3 text-orange-600" />
-                          확인 필요
+                        <span
+                          title="확인 필요 (종료일 경과 미입력)"
+                          className="inline-flex items-center justify-center gap-1 bg-orange-100 text-orange-800 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-orange-200"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-orange-600 shrink-0" />
+                          <span className="hidden sm:inline">확인 필요</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2.5 py-0.5 rounded-full font-medium border border-emerald-200">
-                          <CheckCircle className="w-3 h-3 text-emerald-500" />
-                          정상 진행
+                        <span
+                          title="정상 진행"
+                          className="inline-flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-medium border border-emerald-200"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-emerald-500 shrink-0" />
+                          <span className="hidden sm:inline">정상 진행</span>
                         </span>
                       )}
-                    </td>
-                    <td className="py-3.5 px-3 text-center text-slate-400">
-                      <ChevronRight className="w-4 h-4 mx-auto text-slate-400 group-hover:text-blue-600" />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          {/* 유의사항 배너 (PDF 4페이지 Spec) */}
-          <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 flex items-start gap-2">
-            <HelpCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-slate-800">유의사항:</strong> 일정상 미완료 대회가 있을 수 있으며, 미완료가 있다고 해서 모두 확인이 필요한 것은 아닙니다. 대회 일정, 결과 입력 시점 및 대시보드 기준일({referenceDate})로 종료되었으나 대회가 완료되지 않을 경우 <strong>'확인필요'</strong>로 표시합니다.
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* 2단계: 시·군·구 목록 화면 */}
       {selectedSido && !selectedSgg && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedSido(null)}
-                  className="p-1 hover:bg-slate-100 rounded-md text-slate-500 transition"
-                  title="전국 시·도 목록으로 돌아가기"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <h3 className="font-bold text-slate-900 text-base">
-                  {selectedSido} 시·군·구별 운영 현황
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 ml-6">
-                {selectedSido} · {selectedLeague} 기준 · {sggStats.length}개 시·군·구 (시·군·구를 클릭하면 대회 목록으로 이동합니다)
-              </span>
-            </div>
-
-            <button
-              onClick={() => setSelectedSido(null)}
-              className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition"
-            >
-              전체 시·도로 복귀
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">시·군·구</th>
-                  <th className="py-3 px-3 text-center">전체</th>
-                  <th className="py-3 px-3 text-center">완료</th>
-                  <th className="py-3 px-3 text-center">미완료</th>
-                  <th className="py-3 px-4 min-w-[200px]">진행률</th>
-                  <th className="py-3 px-4 text-center">상태</th>
-                  <th className="py-3 px-3 text-center">이동</th>
+                  {renderSortableHeader('시·군·구', 'name', 'left', 'pl-3.5 sm:pl-4')}
+                  {renderSortableHeader('전체', 'total', 'center')}
+                  {renderSortableHeader('완료', 'completed', 'center')}
+                  {renderSortableHeader('미완료', 'uncompleted', 'center')}
+                  {renderSortableHeader('진행률', 'rate', 'right', 'sm:min-w-[180px]')}
+                  {renderSortableHeader('상태', 'status', 'center', 'pr-3 sm:pr-4')}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {sggStats.map((item) => (
+                {sortedSggStats.map((item) => (
                   <tr
                     key={item.sgg}
                     onClick={() => setSelectedSgg(item.sgg)}
                     className="hover:bg-blue-50/60 cursor-pointer transition"
                   >
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <td className="py-3 sm:py-3.5 pl-3.5 pr-2 sm:px-4 font-bold text-slate-900 whitespace-nowrap">
                       {item.sgg}
                     </td>
-                    <td className="py-3.5 px-3 text-center font-semibold text-slate-700">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center font-semibold text-slate-700 whitespace-nowrap">
                       {item.total}
                     </td>
-                    <td className="py-3.5 px-3 text-center text-emerald-700 font-bold">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center text-emerald-700 font-bold whitespace-nowrap">
                       {item.completed}
                     </td>
-                    <td className="py-3.5 px-3 text-center text-slate-500 font-medium">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-3 text-center text-slate-500 font-medium whitespace-nowrap">
                       {item.uncompleted}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <td className="py-3 sm:py-3.5 px-1 sm:px-4 text-right sm:text-left whitespace-nowrap">
+                      <div className="flex items-center justify-end sm:justify-start gap-2">
+                        <div className="hidden sm:block flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
                           <div
                             className={`h-2 rounded-full ${
                               item.rate === 100
@@ -327,65 +363,39 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                             style={{ width: `${item.rate}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-700 w-12 text-right">
+                        <span className="text-xs font-bold text-slate-700 sm:w-12 text-right">
                           {item.rate}%
                         </span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3 sm:py-3.5 pl-1 pr-3 sm:px-4 text-center whitespace-nowrap">
                       {item.status === '확인 필요' ? (
-                        <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-orange-200">
-                          <AlertTriangle className="w-3 h-3 text-orange-600" />
-                          확인 필요
+                        <span
+                          title="확인 필요 (종료일 경과 미입력)"
+                          className="inline-flex items-center justify-center gap-1 bg-orange-100 text-orange-800 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-orange-200"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-orange-600 shrink-0" />
+                          <span className="hidden sm:inline">확인 필요</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2.5 py-0.5 rounded-full font-medium border border-emerald-200">
-                          <CheckCircle className="w-3 h-3 text-emerald-500" />
-                          정상 진행
+                        <span
+                          title="정상 진행"
+                          className="inline-flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-medium border border-emerald-200"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-emerald-500 shrink-0" />
+                          <span className="hidden sm:inline">정상 진행</span>
                         </span>
                       )}
-                    </td>
-                    <td className="py-3.5 px-3 text-center text-slate-400">
-                      <ChevronRight className="w-4 h-4 mx-auto" />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 3단계: 개별 대회 상세 목록 & 아코디언 확장 화면 (PDF 6페이지 Spec) */}
-      {selectedSido && selectedSgg && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setSelectedSgg(null)}
-                  className="p-1 hover:bg-slate-100 rounded-md text-slate-500 transition"
-                  title="시·군·구 목록으로 돌아가기"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <h3 className="font-bold text-slate-900 text-base">
-                  {selectedSido} {selectedSgg} 대회 목록
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 ml-6">
-                총 {tournamentList.length}건 · 행을 클릭하면 대회의 참가팀 및 입상 상세 정보가 펼쳐집니다.
-              </span>
-            </div>
-
-            <button
-              onClick={() => setSelectedSgg(null)}
-              className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition"
-            >
-              시·군·구 목록으로 복귀
-            </button>
-          </div>
-
+        {/* 3단계: 개별 대회 상세 목록 & 아코디언 확장 화면 (PDF 6페이지 Spec) */}
+        {selectedSido && selectedSgg && (
           <div className="p-4 space-y-3">
             {tournamentList.map((item) => {
               const isExpanded = expandedTournament === item.tournament.대회명;
@@ -603,8 +613,8 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
