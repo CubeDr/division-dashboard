@@ -2,8 +2,8 @@ import React from 'react';
 
 interface HeaderProps {
   referenceDate?: string;
-  activeTab: 'overview' | 'regional' | 'participation' | 'raw';
-  onTabChange: (tab: 'overview' | 'regional' | 'participation' | 'raw') => void;
+  activeTab: 'overview' | 'regional' | 'participation';
+  onTabChange: (tab: 'overview' | 'regional' | 'participation') => void;
 }
 
 const formatDateText = (dateStr?: string) => {
@@ -73,20 +73,10 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <span>참가 현황</span>
             </button>
-
-            <button
-              onClick={() => onTabChange('raw')}
-              className={`px-4 py-3 md:py-0 md:h-16 border-b-[3px] transition-all whitespace-nowrap flex items-center justify-center ${
-                activeTab === 'raw'
-                  ? 'border-blue-500 text-blue-400 font-semibold bg-slate-800/40'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-800/20'
-              }`}
-            >
-              <span>대회 검색</span>
-            </button>
           </nav>
         </div>
       </div>
     </header>
   );
 };
+

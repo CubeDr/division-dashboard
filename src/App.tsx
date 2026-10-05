@@ -4,7 +4,6 @@ import { Header } from './components/Header';
 import { LeagueOverview } from './components/LeagueOverview';
 import { RegionalStatus } from './components/RegionalStatus';
 import { ParticipationStatus } from './components/ParticipationStatus';
-import { RawTournaments } from './components/RawTournaments';
 import { Tournament, PlayerRank, LeagueName } from './types/dashboard';
 
 export default function App() {
@@ -12,7 +11,7 @@ export default function App() {
   const [players] = useState<PlayerRank[]>(initialData.players as PlayerRank[]);
   const referenceDate = '2026-09-18';
   const [selectedLeague, setSelectedLeague] = useState<LeagueName>('성인부리그');
-  const [activeTab, setActiveTab] = useState<'overview' | 'regional' | 'participation' | 'raw'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'regional' | 'participation'>('overview');
 
   // 비공개 대회 수 계산 (PDF 기준 29건)
   const privateCount = tournaments.filter((t) => t.상태 === '비공개').length;
@@ -56,15 +55,8 @@ export default function App() {
             onSelectLeague={setSelectedLeague}
           />
         )}
-
-        {activeTab === 'raw' && (
-          <RawTournaments
-            tournaments={tournaments}
-            players={players}
-            referenceDate={referenceDate}
-          />
-        )}
       </main>
+
 
       {/* 푸터 */}
       <footer className="bg-white border-t border-slate-200 mt-12 py-6 text-xs text-slate-500">
