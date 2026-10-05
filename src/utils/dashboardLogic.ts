@@ -57,7 +57,8 @@ export function getLeagueStats(
 export function getMonthlyStats(
   tournaments: Tournament[],
   players: PlayerRank[],
-  selectedLeague: LeagueName | '전체'
+  selectedLeague: LeagueName | '전체',
+  referenceDate?: string
 ): MonthData[] {
   const completedNames = getCompletedTournamentNames(players);
 
@@ -68,9 +69,21 @@ export function getMonthlyStats(
     return true;
   });
 
+  // 데이터가 존재하는 시작 월(최소 월) 탐색
+  let minMonth = 1;
+  const monthNumbers = list
+    .filter((t) => Boolean(t.종료일))
+    .map((t) => parseInt(t.종료일.substring(5, 7), 10))
+    .filter((m) => !isNaN(m) && m >= 1 && m <= 12);
+
+  if (monthNumbers.length > 0) {
+    minMonth = Math.min(...monthNumbers);
+  }
+
+  const maxMonth = referenceDate ? parseInt(referenceDate.substring(5, 7), 10) : 12;
   const monthsData: MonthData[] = [];
 
-  for (let m = 1; m <= 12; m++) {
+  for (let m = minMonth; m <= maxMonth; m++) {
     // 당월 종료 대회
     const monthTourneys = list.filter((t) => {
       if (!t.종료일) return false;

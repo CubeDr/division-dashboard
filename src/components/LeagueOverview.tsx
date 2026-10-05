@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  ReferenceArea,
+  LabelList
 } from 'recharts';
 import {
   Trophy,
@@ -15,7 +17,6 @@ import {
   Award,
   ChevronRight,
   X,
-  AlertTriangle,
   Calendar,
   MapPin,
   CheckCircle2,
@@ -50,11 +51,13 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
   onSelectLeague,
   onSelectTournamentModal
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(7); // Default to July like PDF, or user can click
+  // 기준일 기준 가장 최신 월을 기본 선택
+  const latestMonth = referenceDate ? parseInt(referenceDate.substring(5, 7), 10) : 9;
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(latestMonth);
   const [detailModalItem, setDetailModalItem] = useState<TournamentDetailInfo | null>(null);
 
   const leagueStats = getLeagueStats(tournaments, players);
-  const monthlyData = getMonthlyStats(tournaments, players, selectedLeague);
+  const monthlyData = getMonthlyStats(tournaments, players, selectedLeague, referenceDate);
 
   // 미완료 대회 목록
   const uncompletedList = selectedMonth !== null
@@ -85,200 +88,250 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
   const handleBarClick = (data: any) => {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const monthObj = data.activePayload[0].payload;
-      setSelectedMonth(monthObj.month);
+      setSelectedMonth((prev) => (prev === monthObj.month ? null : monthObj.month));
     }
   };
 
-  // Custom Chart Tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const p = payload[0].payload;
-      return (
-        <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl border border-slate-700 text-xs">
-          <div className="font-bold text-sm text-slate-100 mb-1.5 border-b border-slate-700 pb-1">
-            2026년 {label}
-          </div>
-          <div className="flex items-center justify-between gap-4 text-emerald-400 py-0.5">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              완료 (해당 월)
-            </span>
-            <span className="font-bold text-sm">{p.completed}건</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 text-orange-400 py-0.5">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              미완료 (누적)
-            </span>
-            <span className="font-bold text-sm">{p.uncompletedCumulative}건</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-400 border-t border-slate-800 pt-1">
-            클릭 시 해당 월 미완료 대회 목록을 조회합니다.
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+
 
   return (
-    <div className="space-y-6">
-      {/* 1. 리그 유형별 진행률 카드 */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <span>리그 유형별 진행률</span>
-            </h2>
-            <p className="text-xs text-slate-500">
-              비공개 대회 제외 · 카드를 클릭하면 아래 영역이 해당 리그로 필터링됩니다.
-            </p>
-          </div>
-        </div>
+    <div>
+      {/* 1. 상단 리그 선택 일체형 탭 (모바일에서도 3열 유지하여 줄바꿈 방지) */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 relative z-10 -mb-px">
+        {leagues.map(({ name, icon: Icon }) => {
+          const stat = leagueStats[name] || { total: 0, completed: 0, uncompleted: 0, rate: 0 };
+          const isSelected = selectedLeague === name;
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {leagues.map(({ name, icon: Icon, desc }) => {
-            const stat = leagueStats[name] || { total: 0, completed: 0, uncompleted: 0, rate: 0 };
-            const isSelected = selectedLeague === name;
-
-            return (
-              <div
-                key={name}
-                onClick={() => onSelectLeague(name)}
-                className={`relative rounded-xl p-5 cursor-pointer transition-all duration-200 border text-left shadow-sm hover:shadow-md ${
-                  isSelected
-                    ? 'bg-white border-blue-600 ring-2 ring-blue-500/20 shadow-blue-50'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                {isSelected && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1 text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                    선택됨
+          return (
+            <button
+              type="button"
+              key={name}
+              onClick={() => onSelectLeague(name)}
+              className={`rounded-t-xl sm:rounded-t-2xl p-2.5 sm:p-3.5 md:p-4 transition-all duration-200 ${
+                isSelected
+                  ? 'bg-white border-x border-t border-slate-300 border-b-2 border-b-white border-t-[3px] border-t-blue-600 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.05)] pb-2.5 sm:pb-3 md:pb-3.5 relative z-20'
+                  : 'bg-slate-100/75 hover:bg-slate-50/90 border border-slate-200/80 text-slate-500 hover:text-slate-700 pb-2.5 sm:pb-3 md:pb-3.5 relative z-10'
+              }`}
+            >
+              {/* 모바일 화면 (< sm): 컴팩트 3줄 중앙 정렬 (진행도 + 수치 통합 표기) */}
+              <div className="sm:hidden flex flex-col items-center justify-between w-full">
+                {/* 상단: 아이콘 + 리그명 */}
+                <div className="flex items-center justify-center space-x-1.5 w-full">
+                  <div className={`p-1 rounded-md ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
-                )}
-
-                <div className="flex items-center space-x-2 text-slate-600 mb-2">
-                  <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-base text-slate-900">{name}</h3>
+                  <h3 className={`font-bold text-xs leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+                    {name}
+                  </h3>
                 </div>
 
-                <div className="flex items-baseline space-x-2 my-2">
-                  <span className="text-3xl font-extrabold tracking-tight text-slate-900">
+                {/* 중단: 진행도 + (완료 / 전체) 통합 표기 */}
+                <div className="flex flex-wrap items-baseline justify-center gap-1 my-0.5 w-full">
+                  <span className={`text-sm font-bold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-800'}`}>
+                    {stat.rate}%
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    ({stat.completed} / {stat.total})
+                  </span>
+                </div>
+
+                {/* 하단: 미완료 수치 */}
+                <div className="text-[10px] text-center w-full">
+                  <span className={isSelected ? 'text-orange-600 font-semibold' : 'text-slate-500'}>
+                    미완료 {stat.uncompleted}
+                  </span>
+                </div>
+              </div>
+
+              {/* 넓은 화면 (>= sm): 기존 분리 레이아웃 유지 (진행률 분리 + 프로그레스바 + 완료/전체/미완료 가로 정렬, 여백 슬림화 적용) */}
+              <div className="hidden sm:block w-full text-left">
+                {/* 상단: 아이콘 + 리그명 */}
+                <div className="flex items-center space-x-2">
+                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <h3 className={`font-bold text-sm md:text-base leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+                    {name}
+                  </h3>
+                </div>
+
+                {/* 중단: 진행도 */}
+                <div className="flex items-baseline space-x-2 my-1.5">
+                  <span className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-900'}`}>
                     {stat.rate}%
                   </span>
                   <span className="text-xs text-slate-500 font-medium">진행률</span>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-slate-100 rounded-full h-2 my-3 overflow-hidden">
+                <div className="w-full bg-slate-200/60 rounded-full h-1.5 my-1.5 overflow-hidden">
                   <div
-                    className={`h-2 rounded-full transition-all duration-500 ${
-                      isSelected ? 'bg-blue-600' : 'bg-slate-500'
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      isSelected ? 'bg-blue-600' : 'bg-slate-400'
                     }`}
                     style={{ width: `${Math.min(stat.rate, 100)}%` }}
                   />
                 </div>
 
+                {/* 하단: 통계 (완료 / 전체 · 미완료, 슬림 여백) */}
                 <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-1 border-t border-slate-100">
                   <span>완료 <strong className="text-slate-900">{stat.completed}</strong></span>
                   <span className="text-slate-300">/</span>
                   <span>전체 <strong className="text-slate-900">{stat.total}</strong></span>
                   <span className="text-slate-300">·</span>
-                  <span className="text-orange-600 font-semibold">미완료 {stat.uncompleted}</span>
+                  <span className={isSelected ? 'text-orange-600 font-semibold' : 'text-slate-500'}>
+                    미완료 {stat.uncompleted}
+                  </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-2 text-xs text-slate-500 flex items-center justify-between px-1">
-          <span className="text-blue-700 font-medium">
-            현재 아래 영역은 <strong className="font-bold text-blue-900 underline decoration-blue-300">{selectedLeague}</strong> 기준으로 표시되고 있습니다.
-          </span>
-          <span className="text-slate-400">
-            (유의: 다른 리그 카드를 누르면 즉시 전환됩니다)
-          </span>
-        </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. 월별 진행상황 차트 */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-2">
-          <div>
-            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-              <span>월별 진행상황</span>
-              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-normal">
-                {selectedLeague}
-              </span>
+      {/* 2 & 3. 통합 메인 컨테이너 (차트 + 하위 미완료 대회 서랍) */}
+      <div className="bg-white rounded-t-none rounded-b-2xl border border-slate-300 shadow-sm overflow-hidden relative z-0">
+        {/* 2. 월별 진행상황 차트 영역 */}
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-slate-900 text-base">
+              월별 진행상황
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              미완료는 완료되지 않은 대회가 다음 달로 이월되는 누적 기준입니다. 막대를 클릭하면 해당 월의 미완료 대회를 확인합니다.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-600"></span>
-              <span className="text-slate-700">완료(해당 월)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-orange-500"></span>
-              <span className="text-slate-700">미완료(누적)</span>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                <span className="text-slate-700">완료(해당 월)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded bg-orange-500"></span>
+                <span className="text-slate-700">미완료(누적)</span>
+              </div>
             </div>
           </div>
+
+          <div className="h-72 w-full mt-4 cursor-pointer [&_.recharts-surface]:cursor-pointer [&_.recharts-tooltip-cursor]:cursor-pointer">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={monthlyData}
+                onClick={handleBarClick}
+                margin={{ top: 28, right: 20, left: -15, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                {selectedMonth !== null && (
+                  <ReferenceArea
+                    x1={`${selectedMonth}월`}
+                    x2={`${selectedMonth}월`}
+                    fill="#3b82f6"
+                    fillOpacity={0.08}
+                    stroke="#93c5fd"
+                    strokeOpacity={0.6}
+                    strokeDasharray="3 3"
+                  />
+                )}
+                <XAxis
+                  dataKey="monthLabel"
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  tickLine={false}
+                  tick={({ x, y, payload }) => {
+                    const monthNum = parseInt(payload.value, 10);
+                    const isSelected = selectedMonth === monthNum;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text
+                          x={0}
+                          y={0}
+                          dy={14}
+                          textAnchor="middle"
+                          fill={isSelected ? '#2563eb' : '#64748b'}
+                          fontWeight={isSelected ? 700 : 500}
+                          fontSize={isSelected ? 13 : 12}
+                        >
+                          {payload.value}
+                        </text>
+                        {isSelected && (
+                          <circle cx={0} cy={22} r={2.5} fill="#2563eb" />
+                        )}
+                      </g>
+                    );
+                  }}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={() => null}
+                  cursor={{ fill: 'rgba(148, 163, 184, 0.14)', radius: 6, style: { cursor: 'pointer' } }}
+                />
+                <Bar
+                  dataKey="completed"
+                  name="완료(해당 월)"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="completed"
+                    position="top"
+                    fill="#047857"
+                    stroke="none"
+                    strokeWidth={0}
+                    fontSize={11}
+                    fontWeight={700}
+                    formatter={(val: any) => (Number(val) > 0 ? `${val}` : '')}
+                  />
+                  {monthlyData.map((entry) => {
+                    const isSelected = selectedMonth === entry.month;
+                    return (
+                      <Cell
+                        key={`cell-completed-${entry.month}`}
+                        fill="#059669"
+                        stroke={isSelected ? '#065f46' : 'none'}
+                        strokeWidth={isSelected ? 2.5 : 0}
+                      />
+                    );
+                  })}
+                </Bar>
+                <Bar
+                  dataKey="uncompletedCumulative"
+                  name="미완료(누적)"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="uncompletedCumulative"
+                    position="top"
+                    fill="#c2410c"
+                    stroke="none"
+                    strokeWidth={0}
+                    fontSize={11}
+                    fontWeight={700}
+                    formatter={(val: any) => (Number(val) > 0 ? `${val}` : '')}
+                  />
+                  {monthlyData.map((entry) => {
+                    const isSelected = selectedMonth === entry.month;
+                    return (
+                      <Cell
+                        key={`cell-uncompleted-${entry.month}`}
+                        fill="#ea580c"
+                        stroke={isSelected ? '#9a3412' : 'none'}
+                        strokeWidth={isSelected ? 2.5 : 0}
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="h-72 w-full mt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={monthlyData}
-              onClick={handleBarClick}
-              margin={{ top: 20, right: 20, left: -15, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis
-                dataKey="monthLabel"
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                axisLine={{ stroke: '#cbd5e1' }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                axisLine={{ stroke: '#cbd5e1' }}
-                tickLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar
-                dataKey="completed"
-                name="완료(해당 월)"
-                fill="#059669"
-                radius={[4, 4, 0, 0]}
-                cursor="pointer"
-              />
-              <Bar
-                dataKey="uncompletedCumulative"
-                name="미완료(누적)"
-                fill="#ea580c"
-                radius={[4, 4, 0, 0]}
-                cursor="pointer"
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="mt-2 text-center text-xs text-slate-400">
-          * 그래프의 특정 월 막대를 클릭하면 아래의 미완료 대회 목록이 갱신됩니다.
-        </div>
-      </div>
-
-      {/* 3. 특정 월 기준 미완료 대회 목록 패널 (PDF 3페이지 Spec) */}
-      {selectedMonth !== null && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-2">
+        {/* 3. 특정 월 기준 미완료 대회 목록 (차트 카드 내부 서랍 형태로 내포) */}
+        {selectedMonth !== null && (
+          <div className="border-t border-slate-200 bg-slate-50/70 p-5 sm:p-6 transition-all">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></div>
               <h3 className="font-bold text-slate-900 text-base">
                 2026년 {selectedMonth}월 기준 미완료 대회
@@ -286,84 +339,60 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                   (누적 {uncompletedList.length}건)
                 </span>
               </h3>
-              <span className="text-xs text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                {selectedLeague}
-              </span>
             </div>
 
-            <button
-              onClick={() => setSelectedMonth(null)}
-              className="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-200 transition"
-            >
-              <X className="w-4 h-4" />
-              <span>닫기</span>
-            </button>
-          </div>
-
-          <div className="mt-3 text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-amber-900">유의사항:</strong> 해당 월을 선택하면 이전 월에서 이월된 미완료 대회를 포함하여, 기준일({referenceDate}) 현재 완료되지 않은 대회 목록을 확인할 수 있습니다.
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-2.5 max-h-96 overflow-y-auto pr-1">
-            {uncompletedList.length === 0 ? (
-              <div className="text-center py-10 bg-white rounded-lg border border-slate-200 text-slate-500 text-sm">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                2026년 {selectedMonth}월까지 누적된 미완료 대회가 없습니다.
-              </div>
-            ) : (
-              uncompletedList.map((item, idx) => (
-                <div
-                  key={`${item.tournament.대회명}-${idx}`}
-                  className="bg-white border border-slate-200 hover:border-blue-400 rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition shadow-sm"
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-medium">
-                        {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
-                      </span>
-                      <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
-                        {item.tournament.라운드}
-                      </span>
-                      <span className="text-xs text-slate-400">
-                        종료일: {item.tournament.종료일}
-                      </span>
-                    </div>
-
-                    <h4 className="font-bold text-slate-900 text-sm">
-                      {item.tournament.대회명}
-                    </h4>
-
-                    <div className="text-xs text-orange-700 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>
-                        상태: 결과 미입력
-                        {item.needCheck && (
-                          <strong className="ml-1 text-red-600 font-semibold">
-                            (기준일 경과 후 결과 미입력 - 확인 필요)
-                          </strong>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setDetailModalItem(item)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition flex items-center gap-1"
-                    >
-                      <span>상세 정보</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+            <div className="space-y-2.5">
+              {uncompletedList.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-lg border border-slate-200 text-slate-500 text-sm">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                  2026년 {selectedMonth}월까지 누적된 미완료 대회가 없습니다.
                 </div>
-              ))
-            )}
+              ) : (
+                uncompletedList.map((item, idx) => (
+                  <button
+                    type="button"
+                    key={`${item.tournament.대회명}-${idx}`}
+                    onClick={() => setDetailModalItem(item)}
+                    className="w-full text-left bg-white border border-slate-200 hover:border-blue-400 hover:shadow-sm hover:bg-slate-50/50 rounded-lg p-3.5 flex items-center justify-between gap-3 transition cursor-pointer group"
+                  >
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-medium">
+                          {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
+                        </span>
+                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
+                          {item.tournament.라운드}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          종료일: {item.tournament.종료일}
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
+                        {item.tournament.대회명}
+                      </h4>
+
+                      <div className="text-xs text-orange-700 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>
+                          상태: 결과 미입력
+                          {item.needCheck && (
+                            <strong className="ml-1 text-red-600 font-semibold">
+                              (기준일 경과 후 결과 미입력 - 확인 필요)
+                            </strong>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 대회 상세 모달 */}
       {detailModalItem && (
