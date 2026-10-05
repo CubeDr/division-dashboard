@@ -34,16 +34,21 @@ export interface LeagueStats {
   total: number;
   completed: number;
   uncompleted: number;
+  needCheckCount: number;
   rate: number; // percentage (e.g. 81.2)
 }
+
 
 export interface MonthData {
   month: number;
   monthLabel: string;
   completed: number; // 당월 완료
-  uncompletedCumulative: number; // 누적 미완료
+  uncompletedCumulative: number; // 누적 미완료 전체
+  needCheckCumulative: number; // 누적 미완료 중 확인 필요 (빨간색)
+  uncompletedNormal: number; // 누적 미완료 중 정상 예정 (주황색)
   totalThisMonth: number;
 }
+
 
 export interface SidoStat {
   sido: string;

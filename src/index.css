@@ -24,3 +24,10 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Hide sticky tooltip hover cursor on touch devices and mobile screens */
+@media (hover: none) and (pointer: coarse), (max-width: 639px) {
+  .recharts-tooltip-cursor {
+    display: none !important;
+  }
+}

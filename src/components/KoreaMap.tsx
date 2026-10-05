@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -58,6 +58,13 @@ export const KoreaMap: React.FC<KoreaMapProps> = ({
   allSidoComparison
 }) => {
   const [hoveredSido, setHoveredSido] = useState<string | null>(null);
+
+  // 모바일 및 터치 환경 등에서 선택 해제 시 잔존 hover 스타일 완전 제거
+  useEffect(() => {
+    if (!selectedSido) {
+      setHoveredSido(null);
+    }
+  }, [selectedSido]);
 
   // 단체전 / 개인전 필터 토글 상태
   const [showGroup, setShowGroup] = useState<boolean>(true);
@@ -316,9 +323,31 @@ export const KoreaMap: React.FC<KoreaMapProps> = ({
                   stroke={isSelected ? '#f59e0b' : isHovered ? '#1e3a8a' : '#ffffff'}
                   strokeWidth={isSelected ? 4 : isHovered ? 2.5 : 1.3}
                   strokeLinejoin="round"
-                  strokeLinecap="round"
-                  onClick={count > 0 ? () => onSelectSido(isSelected ? null : krName) : undefined}
-                  onMouseEnter={count > 0 ? () => setHoveredSido(krName) : undefined}
+                  onClick={
+                    count > 0
+                      ? () => {
+                          if (isSelected) {
+                            onSelectSido(null);
+                            setHoveredSido(null);
+                          } else {
+                            onSelectSido(krName);
+                            if (typeof window !== 'undefined' && !window.matchMedia?.('(hover: hover)').matches) {
+                              setHoveredSido(null);
+                            }
+                          }
+                        }
+                      : undefined
+                  }
+                  onTouchStart={() => setHoveredSido(null)}
+                  onMouseEnter={
+                    count > 0
+                      ? () => {
+                          if (typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches) {
+                            setHoveredSido(krName);
+                          }
+                        }
+                      : undefined
+                  }
                   onMouseLeave={count > 0 ? () => setHoveredSido(null) : undefined}
                   className={`transition-colors duration-150 ${count > 0 ? 'cursor-pointer' : 'cursor-default'}`}
                   style={{

@@ -56,7 +56,7 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'completed' | 'uncompleted'>('uncompleted');
   const [expandedTournament, setExpandedTournament] = useState<string | null>(null);
 
-  const leagueStats = getLeagueStats(tournaments, players);
+  const leagueStats = getLeagueStats(tournaments, players, referenceDate);
   const monthlyData = getMonthlyStats(tournaments, players, selectedLeague, referenceDate);
 
   // 해당 월 완료 대회 목록
@@ -93,11 +93,51 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
   ];
 
   const handleBarClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      const monthObj = data.activePayload[0].payload;
+    const monthObj = data?.activePayload?.[0]?.payload ?? data?.payload;
+    if (monthObj && monthObj.month) {
       setSelectedMonth((prev) => (prev === monthObj.month ? null : monthObj.month));
     }
   };
+
+  const handleBarElementClick = (entry: any, tab: 'completed' | 'uncompleted') => {
+    const monthNum = entry?.payload?.month ?? entry?.month;
+    if (monthNum) {
+      setSelectedMonth((prev) => (prev === monthNum && activeSubTab === tab ? null : monthNum));
+      setActiveSubTab(tab);
+      setExpandedTournament(null);
+    }
+  };
+
+  // 스택 바 상단 모서리 둥글기 처리 커스텀 shape (상단에 위치할 때만 r=4 적용)
+  const renderStackedBar = (fillColor: string, isTopBar: boolean) => (props: any) => {
+    const { x, y, width, height, payload, stroke, strokeWidth } = props;
+    if (typeof x !== 'number' || typeof y !== 'number' || !width || !height || height <= 0) {
+      return <path d="" />;
+    }
+
+    // 정상 미완료가 0이거나, 최상단 바인 경우 상단 모서리 둥글게(r=4) 처리
+    const isTop = isTopBar || (payload && payload.uncompletedNormal === 0);
+    const r = isTop ? Math.min(4, height, width / 2) : 0;
+
+    const path = r > 0
+      ? `M ${x},${y + height} L ${x},${y + r} Q ${x},${y} ${x + r},${y} L ${x + width - r},${y} Q ${x + width},${y} ${x + width},${y + r} L ${x + width},${y + height} Z`
+      : `M ${x},${y + height} L ${x},${y} L ${x + width},${y} L ${x + width},${y + height} Z`;
+
+    return (
+      <path
+        d={path}
+        fill={props.fill || fillColor}
+        stroke={stroke || 'none'}
+        strokeWidth={strokeWidth || 0}
+        className="cursor-pointer"
+        onClick={(e: any) => {
+          e?.stopPropagation?.();
+          handleBarElementClick(payload, 'uncompleted');
+        }}
+      />
+    );
+  };
+
 
 
 
@@ -106,7 +146,7 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
       {/* 1. 상단 리그 선택 일체형 탭 (모바일에서도 3열 유지하여 줄바꿈 방지) */}
       <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 relative z-10 -mb-px">
         {leagues.map(({ name, icon: Icon }) => {
-          const stat = leagueStats[name] || { total: 0, completed: 0, uncompleted: 0, rate: 0 };
+          const stat = leagueStats[name] || { total: 0, completed: 0, uncompleted: 0, needCheckCount: 0, rate: 0 };
           const isSelected = selectedLeague === name;
 
           return (
@@ -117,27 +157,35 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
               className={`rounded-t-xl sm:rounded-t-2xl p-2 sm:p-3.5 md:p-4 transition-all duration-200 ${
                 isSelected
                   ? 'bg-white border-x border-t border-slate-300 border-b-2 border-b-white border-t-[3px] border-t-blue-600 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.05)] pb-2 sm:pb-3 md:pb-3.5 relative z-20'
-                  : 'bg-slate-100/75 hover:bg-slate-50/90 border border-slate-200/80 text-slate-500 hover:text-slate-700 pb-2 sm:pb-3 md:pb-3.5 relative z-10'
+                  : 'bg-slate-100/75 hover:bg-slate-50/90 border border-slate-300 text-slate-500 hover:text-slate-700 pb-2 sm:pb-3 md:pb-3.5 relative z-10'
               }`}
-
             >
-              {/* 모바일 화면 (< sm): 슬림 2줄 레이아웃 (1행: 리그명 + 미완료 뱃지 / 2행: 진행도 + 모수) */}
+              {/* 모바일 화면 (< sm): 슬림 2줄 레이아웃 (1행: 리그명 + 확인 필요 뱃지 / 2행: 진행도 + 모수) */}
               <div className="sm:hidden flex flex-col items-center justify-center w-full py-0.5">
-                {/* 1행: 리그명 + 미완료 알림 뱃지 */}
+                {/* 1행: 리그명 + 확인 필요 알림 뱃지 */}
                 <div className="flex items-center justify-center gap-1.5 w-full whitespace-nowrap">
                   <span className={`font-bold text-xs leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
                     {name.replace('리그', '')}
                   </span>
-                  <span
-                    title={`미완료 ${stat.uncompleted}건`}
-                    className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0 ${
-                      isSelected
-                        ? 'bg-orange-500 text-white shadow-xs'
-                        : 'bg-orange-100 text-orange-700'
-                    }`}
-                  >
-                    {stat.uncompleted}
-                  </span>
+                  {stat.needCheckCount > 0 ? (
+                    <span
+                      title={`확인 필요 ${stat.needCheckCount}건 (기준일 경과 후 결과 미입력)`}
+                      className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0 ${
+                        isSelected
+                          ? 'bg-rose-500 text-white shadow-xs'
+                          : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      {stat.needCheckCount}
+                    </span>
+                  ) : (
+                    <span
+                      title="확인 필요 0건 (정상 진행)"
+                      className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none shrink-0 bg-slate-100 text-slate-400"
+                    >
+                      0
+                    </span>
+                  )}
                 </div>
 
                 {/* 2행: 진행도 + (완료 / 전체) 통합 표기 */}
@@ -152,28 +200,53 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
               </div>
 
 
-              {/* 넓은 화면 (>= sm): 기존 분리 레이아웃 유지 (진행률 분리 + 프로그레스바 + 완료/전체/미완료 가로 정렬, 여백 슬림화 적용) */}
+              {/* 넓은 화면 (>= sm): 기존 분리 레이아웃 유지 (진행률 분리 + 프로그레스바 + 완료/전체/확인필요 가로 정렬, 여백 슬림화 적용) */}
               <div className="hidden sm:block w-full text-left">
-                {/* 상단: 아이콘 + 리그명 */}
-                <div className="flex items-center space-x-2">
-                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-                    <Icon className="w-4 h-4" />
+                {/* 상단: 아이콘 + 리그명 + 확인 필요 뱃지 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <h3 className={`font-bold text-sm md:text-base leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+                      {name}
+                    </h3>
                   </div>
-                  <h3 className={`font-bold text-sm md:text-base leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
-                    {name}
-                  </h3>
+
+                  {stat.needCheckCount > 0 && (
+                    <span
+                      title={`기준일 경과 후 결과 미입력: ${stat.needCheckCount}건`}
+                      className="px-1.5 sm:px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 shrink-0 whitespace-nowrap"
+                    >
+                      <span className="hidden md:inline">확인 필요 </span>
+                      <span className="md:hidden">확인 </span>
+                      {stat.needCheckCount}
+                    </span>
+                  )}
                 </div>
 
-                {/* 중단: 진행도 */}
-                <div className="flex items-baseline space-x-2 my-1.5">
-                  <span className={`text-2xl md:text-3xl font-extrabold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-900'}`}>
-                    {stat.rate}%
-                  </span>
-                  <span className="text-xs text-slate-500 font-medium">진행률</span>
+                {/* 중단: 진행률 + 완료/전체 수치 (중간 해상도 반응형 줄바꿈 방지) */}
+                <div className="flex items-baseline justify-between mt-2 mb-1.5 gap-1">
+                  <div className="flex items-baseline space-x-1 shrink-0 whitespace-nowrap">
+                    <span className={`text-xl sm:text-2xl xl:text-3xl font-extrabold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-900'}`}>
+                      {stat.rate}%
+                    </span>
+                    <span className="hidden xl:inline text-xs text-slate-400 font-medium">진행률</span>
+                  </div>
+
+                  {/* Progress Bar 오른쪽 위: 완료 / 전체 (중간 크기에서는 112 / 138로 컴팩트하게 노출) */}
+                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium shrink-0 whitespace-nowrap text-right">
+                    <span className="hidden xl:inline">완료 </span>
+                    <strong className="text-slate-900">{stat.completed}</strong>
+                    <span className="text-slate-300 mx-0.5 sm:mx-1">/</span>
+                    <span className="hidden xl:inline">전체 </span>
+                    <strong className="text-slate-900">{stat.total}</strong>
+                  </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-slate-200/60 rounded-full h-1.5 my-1.5 overflow-hidden">
+                <div className="w-full bg-slate-200/60 rounded-full h-1.5 overflow-hidden">
+
                   <div
                     className={`h-1.5 rounded-full transition-all duration-500 ${
                       isSelected ? 'bg-blue-600' : 'bg-slate-400'
@@ -181,21 +254,13 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                     style={{ width: `${Math.min(stat.rate, 100)}%` }}
                   />
                 </div>
-
-                {/* 하단: 통계 (완료 / 전체 · 미완료, 슬림 여백) */}
-                <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-1 border-t border-slate-100">
-                  <span>완료 <strong className="text-slate-900">{stat.completed}</strong></span>
-                  <span className="text-slate-300">/</span>
-                  <span>전체 <strong className="text-slate-900">{stat.total}</strong></span>
-                  <span className="text-slate-300">·</span>
-                  <span className={isSelected ? 'text-orange-600 font-semibold' : 'text-slate-500'}>
-                    미완료 {stat.uncompleted}
-                  </span>
-                </div>
               </div>
+
+
             </button>
           );
         })}
+
       </div>
 
       {/* 2 & 3. 통합 메인 컨테이너 (차트 + 하위 미완료 대회 서랍) */}
@@ -207,26 +272,29 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
               월별 진행상황
             </h3>
 
-            <div className="flex items-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-medium">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-medium">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-600"></span>
                 <span className="text-slate-700">완료(해당 월)</span>
               </div>
               <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-rose-600"></span>
+                <span className="text-slate-700">확인 필요</span>
+              </div>
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-orange-500"></span>
-                <span className="text-slate-700">미완료(누적)</span>
+                <span className="text-slate-700">미완료(예정)</span>
               </div>
             </div>
           </div>
 
-          <div className="h-52 sm:h-64 md:h-72 w-full mt-2.5 sm:mt-4 cursor-pointer [&_.recharts-surface]:cursor-pointer [&_.recharts-tooltip-cursor]:cursor-pointer">
+          <div className="h-52 sm:h-64 md:h-72 w-full mt-2.5 sm:mt-4 cursor-pointer [&_.recharts-surface]:cursor-pointer [&_.recharts-tooltip-cursor]:cursor-pointer max-sm:[&_.recharts-tooltip-cursor]:hidden [@media(hover:none)]:[&_.recharts-tooltip-cursor]:hidden">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={monthlyData}
                 onClick={handleBarClick}
                 margin={{ top: 24, right: 12, left: -18, bottom: 2 }}
               >
-
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 {selectedMonth !== null && (
                   <ReferenceArea
@@ -259,9 +327,6 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                         >
                           {payload.value}
                         </text>
-                        {isSelected && (
-                          <circle cx={0} cy={22} r={2.5} fill="#2563eb" />
-                        )}
                       </g>
                     );
                   }}
@@ -275,19 +340,14 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                   content={() => null}
                   cursor={{ fill: 'rgba(148, 163, 184, 0.14)', radius: 6, style: { cursor: 'pointer' } }}
                 />
+                {/* 1. 완료 막대 */}
                 <Bar
                   dataKey="completed"
                   name="완료(해당 월)"
                   radius={[4, 4, 0, 0]}
                   cursor="pointer"
                   isAnimationActive={false}
-                  onClick={(entry: any) => {
-                    if (entry && entry.month) {
-                      setSelectedMonth(entry.month);
-                      setActiveSubTab('completed');
-                      setExpandedTournament(null);
-                    }
-                  }}
+                  onClick={(entry: any) => handleBarElementClick(entry, 'completed')}
                 >
                   <LabelList
                     dataKey="completed"
@@ -307,24 +367,47 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                         fill="#059669"
                         stroke={isSelected ? '#065f46' : 'none'}
                         strokeWidth={isSelected ? 2.5 : 0}
+                        onClick={() => handleBarElementClick(entry, 'completed')}
                       />
                     );
                   })}
                 </Bar>
+
+                {/* 2-A. 미완료 스택 하단: 확인 필요 (빨간색) */}
                 <Bar
-                  dataKey="uncompletedCumulative"
-                  name="미완료(누적)"
-                  radius={[4, 4, 0, 0]}
+                  dataKey="needCheckCumulative"
+                  stackId="uncompletedStack"
+                  name="확인 필요"
                   cursor="pointer"
                   isAnimationActive={false}
-                  onClick={(entry: any) => {
-                    if (entry && entry.month) {
-                      setSelectedMonth(entry.month);
-                      setActiveSubTab('uncompleted');
-                      setExpandedTournament(null);
-                    }
-                  }}
+                  shape={renderStackedBar('#e11d48', false)}
+                  onClick={(entry: any) => handleBarElementClick(entry, 'uncompleted')}
                 >
+                  {monthlyData.map((entry) => {
+                    const isSelected = selectedMonth === entry.month;
+                    return (
+                      <Cell
+                        key={`cell-needcheck-${entry.month}`}
+                        fill="#e11d48"
+                        stroke={isSelected ? '#9a3412' : 'none'}
+                        strokeWidth={isSelected ? 2.5 : 0}
+                        onClick={() => handleBarElementClick(entry, 'uncompleted')}
+                      />
+                    );
+                  })}
+                </Bar>
+
+                {/* 2-B. 미완료 스택 상단: 정상 진행/예정 미완료 (주황색) */}
+                <Bar
+                  dataKey="uncompletedNormal"
+                  stackId="uncompletedStack"
+                  name="미완료(예정)"
+                  cursor="pointer"
+                  isAnimationActive={false}
+                  shape={renderStackedBar('#ea580c', true)}
+                  onClick={(entry: any) => handleBarElementClick(entry, 'uncompleted')}
+                >
+                  {/* 스택 상단에 전체 미완료 누적 수 표시 */}
                   <LabelList
                     dataKey="uncompletedCumulative"
                     position="top"
@@ -343,6 +426,7 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                         fill="#ea580c"
                         stroke={isSelected ? '#9a3412' : 'none'}
                         strokeWidth={isSelected ? 2.5 : 0}
+                        onClick={() => handleBarElementClick(entry, 'uncompleted')}
                       />
                     );
                   })}
@@ -350,48 +434,33 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
               </BarChart>
             </ResponsiveContainer>
           </div>
+
         </div>
 
         {/* 3. 특정 월 기준 대회 목록 (완료/미완료 서브 탭 + 인라인 아코디언 카드) */}
         {selectedMonth !== null && (
           <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-6 transition-all">
             {/* 서브 탭 & 카운트 요약 헤더 */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    activeSubTab === 'completed'
-                      ? 'bg-emerald-500'
-                      : 'bg-orange-500 animate-pulse'
-                  }`}
-                />
-                <h3 className="font-bold text-slate-900 text-base">
-                  2026년 {selectedMonth}월 {activeSubTab === 'completed' ? '완료' : '미완료'} 대회
-                  <span
-                    className={`ml-1.5 font-bold ${
-                      activeSubTab === 'completed' ? 'text-emerald-600' : 'text-orange-600'
-                    }`}
-                  >
-                    ({activeSubTab === 'completed' ? `해당 월 ${completedList.length}건` : `누적 ${uncompletedList.length}건`})
-                  </span>
-                </h3>
-              </div>
+            <div className="flex items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base shrink-0">
+                {selectedMonth}월 대회 현황
+              </h3>
 
               {/* 완료 / 미완료 탭 토글 캡슐 */}
-              <div className="flex items-center bg-slate-200/80 p-1 rounded-lg text-xs font-semibold self-start sm:self-auto">
+              <div className="flex items-center bg-slate-200/80 p-0.5 sm:p-1 rounded-lg text-[11px] sm:text-xs font-semibold shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveSubTab('completed');
                     setExpandedTournament(null);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md transition cursor-pointer ${
                     activeSubTab === 'completed'
                       ? 'bg-white text-emerald-700 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600" />
                   <span>완료 ({completedList.length})</span>
                 </button>
                 <button
@@ -400,13 +469,13 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                     setActiveSubTab('uncompleted');
                     setExpandedTournament(null);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md transition cursor-pointer ${
                     activeSubTab === 'uncompleted'
                       ? 'bg-white text-orange-700 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Clock className="w-3.5 h-3.5 text-orange-600" />
+                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-orange-600" />
                   <span>미완료 ({uncompletedList.length})</span>
                 </button>
               </div>
@@ -465,7 +534,7 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                                 완료
                               </span>
                             ) : item.needCheck ? (
-                              <span className="bg-orange-100 text-orange-800 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-orange-200 whitespace-nowrap">
+                              <span className="bg-rose-100 text-rose-700 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-rose-200 whitespace-nowrap">
                                 확인 필요
                               </span>
                             ) : (

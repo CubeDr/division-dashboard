@@ -25,7 +25,8 @@ export function getCompletedTournamentNames(players: PlayerRank[]): Set<string> 
 // 1. 리그 유형별 진행률 계산 (공개 대회 기준)
 export function getLeagueStats(
   tournaments: Tournament[],
-  players: PlayerRank[]
+  players: PlayerRank[],
+  referenceDate: string = '2026-09-18'
 ): Record<LeagueName, LeagueStats> {
   const completedNames = getCompletedTournamentNames(players);
   const leagues: LeagueName[] = ['성인부리그', '유청소년리그', '시니어리그'];
@@ -37,7 +38,20 @@ export function getLeagueStats(
       (t) => t.상태 === '공개' && t.리그 === league
     );
     const total = list.length;
-    const completed = list.filter((t) => completedNames.has(t.대회명.trim())).length;
+    let completed = 0;
+    let needCheckCount = 0;
+
+    for (const t of list) {
+      const isCompleted = completedNames.has(t.대회명.trim());
+      if (isCompleted) {
+        completed++;
+      } else {
+        if (t.종료일 && t.종료일 <= referenceDate) {
+          needCheckCount++;
+        }
+      }
+    }
+
     const uncompleted = total - completed;
     const rate = total > 0 ? Number(((completed / total) * 100).toFixed(1)) : 0;
 
@@ -46,12 +60,14 @@ export function getLeagueStats(
       total,
       completed,
       uncompleted,
+      needCheckCount,
       rate
     };
   }
 
   return result;
 }
+
 
 // 2. 월별 완료 / 미완료(누적) 현황 계산
 export function getMonthlyStats(
@@ -95,25 +111,38 @@ export function getMonthlyStats(
       completedNames.has(t.대회명.trim())
     ).length;
 
-    // m월까지의 전체 대회 중 아직 미완료인 것의 누적 수
-    const uncompletedCumulative = list.filter((t) => {
+    // m월까지의 전체 대회 중 아직 미완료인 대회의 누적 목록
+    const uncompletedTourneys = list.filter((t) => {
       if (!t.종료일) return false;
       const monthNum = parseInt(t.종료일.substring(5, 7), 10);
       const isCompleted = completedNames.has(t.대회명.trim());
       return monthNum <= m && !isCompleted;
+    });
+
+    const uncompletedCumulative = uncompletedTourneys.length;
+
+    // 그 중 기준일 경과로 결과 미입력 상태인 '확인 필요' 대회 수 (빨간색 스택)
+    const needCheckCumulative = uncompletedTourneys.filter((t) => {
+      return referenceDate ? t.종료일 <= referenceDate : false;
     }).length;
+
+    // 확인 필요가 아닌 정상 진행/예정 미완료 대회 수 (주황색 스택)
+    const uncompletedNormal = uncompletedCumulative - needCheckCumulative;
 
     monthsData.push({
       month: m,
       monthLabel: `${m}월`,
       completed: completedInMonth,
       uncompletedCumulative,
+      needCheckCumulative,
+      uncompletedNormal,
       totalThisMonth: monthTourneys.length
     });
   }
 
   return monthsData;
 }
+
 
 // 3. 특정 월 기준 미완료 대회 목록 (해당 월까지 예정/종료되었으나 결과 미입력)
 export function getUncompletedTournaments(

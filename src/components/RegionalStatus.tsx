@@ -295,9 +295,9 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                       {item.status === '확인 필요' ? (
                         <span
                           title="확인 필요 (종료일 경과 미입력)"
-                          className="inline-flex items-center justify-center gap-1 bg-orange-100 text-orange-800 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-orange-200"
+                          className="inline-flex items-center justify-center gap-1 bg-rose-100 text-rose-700 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-rose-200"
                         >
-                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-orange-600 shrink-0" />
+                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-rose-600 shrink-0" />
                           <span className="hidden sm:inline">확인 필요</span>
                         </span>
                       ) : (
@@ -373,9 +373,9 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                       {item.status === '확인 필요' ? (
                         <span
                           title="확인 필요 (종료일 경과 미입력)"
-                          className="inline-flex items-center justify-center gap-1 bg-orange-100 text-orange-800 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-orange-200"
+                          className="inline-flex items-center justify-center gap-1 bg-rose-100 text-rose-700 text-[11px] sm:text-xs p-1 sm:px-2.5 sm:py-0.5 rounded-full font-bold border border-rose-200"
                         >
-                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-orange-600 shrink-0" />
+                          <AlertTriangle className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-rose-600 shrink-0" />
                           <span className="hidden sm:inline">확인 필요</span>
                         </span>
                       ) : (
@@ -434,7 +434,7 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                             완료
                           </span>
                         ) : item.needCheck ? (
-                          <span className="bg-orange-100 text-orange-800 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-orange-200 whitespace-nowrap">
+                          <span className="bg-rose-100 text-rose-700 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-rose-200 whitespace-nowrap">
                             확인 필요
                           </span>
                         ) : (
