@@ -22,7 +22,6 @@ export default function App() {
       {/* 헤더 네비게이션 */}
       <Header
         referenceDate={referenceDate}
-        privateCount={privateCount}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
@@ -76,7 +75,7 @@ export default function App() {
             <span>전국 배드민턴 디비전리그 운영 현황 통합 관리 시스템</span>
           </div>
           <div className="text-slate-400">
-            기준일: {referenceDate} &nbsp;•&nbsp; 공개 대회: {tournaments.length - privateCount}건 &nbsp;•&nbsp; 비공개 대회: {privateCount}건
+            기준일: {referenceDate} &nbsp;•&nbsp; 공개 대회: {tournaments.length - privateCount}건 &nbsp;•&nbsp; 비공개 대회: {privateCount}건 &nbsp;•&nbsp; 취소 여부 데이터 없음
           </div>
         </div>
       </footer>
