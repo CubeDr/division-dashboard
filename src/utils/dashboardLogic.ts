@@ -138,6 +138,30 @@ export function getUncompletedTournaments(
     .map((t) => getTournamentDetailInfo(t, players, referenceDate));
 }
 
+// 3-1. 특정 월 기준 완료 대회 목록 (해당 월에 종료 및 결과 입력 완료)
+export function getCompletedTournaments(
+  tournaments: Tournament[],
+  players: PlayerRank[],
+  selectedLeague: LeagueName | '전체',
+  targetMonth: number,
+  referenceDate: string
+): TournamentDetailInfo[] {
+  const completedNames = getCompletedTournamentNames(players);
+
+  return tournaments
+    .filter((t) => {
+      if (t.상태 !== '공개') return false;
+      if (selectedLeague !== '전체' && t.리그 !== selectedLeague) return false;
+      if (!t.종료일) return false;
+      const monthNum = parseInt(t.종료일.substring(5, 7), 10);
+      const isCompleted = completedNames.has(t.대회명.trim());
+      return monthNum === targetMonth && isCompleted;
+    })
+    .sort((a, b) => (a.종료일 || '').localeCompare(b.종료일 || ''))
+    .map((t) => getTournamentDetailInfo(t, players, referenceDate));
+}
+
+
 // 4. 시·도 목록 집계
 export function getSidoStats(
   tournaments: Tournament[],

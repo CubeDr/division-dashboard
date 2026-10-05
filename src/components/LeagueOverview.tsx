@@ -15,10 +15,8 @@ import {
   Trophy,
   Users,
   Award,
-  ChevronRight,
-  X,
-  Calendar,
-  MapPin,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   Clock
 } from 'lucide-react';
@@ -31,7 +29,8 @@ import {
 import {
   getLeagueStats,
   getMonthlyStats,
-  getUncompletedTournaments
+  getUncompletedTournaments,
+  getCompletedTournaments
 } from '../utils/dashboardLogic';
 
 interface LeagueOverviewProps {
@@ -54,15 +53,23 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
   // 기준일 기준 가장 최신 월을 기본 선택
   const latestMonth = referenceDate ? parseInt(referenceDate.substring(5, 7), 10) : 9;
   const [selectedMonth, setSelectedMonth] = useState<number | null>(latestMonth);
-  const [detailModalItem, setDetailModalItem] = useState<TournamentDetailInfo | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<'completed' | 'uncompleted'>('uncompleted');
+  const [expandedTournament, setExpandedTournament] = useState<string | null>(null);
 
   const leagueStats = getLeagueStats(tournaments, players);
   const monthlyData = getMonthlyStats(tournaments, players, selectedLeague, referenceDate);
 
-  // 미완료 대회 목록
+  // 해당 월 완료 대회 목록
+  const completedList = selectedMonth !== null
+    ? getCompletedTournaments(tournaments, players, selectedLeague, selectedMonth, referenceDate)
+    : [];
+
+  // 특정 월까지 누적 미완료 대회 목록
   const uncompletedList = selectedMonth !== null
     ? getUncompletedTournaments(tournaments, players, selectedLeague, selectedMonth, referenceDate)
     : [];
+
+  const currentList = activeSubTab === 'completed' ? completedList : uncompletedList;
 
   const leagues: { name: LeagueName; icon: any; color: string; desc: string }[] = [
     {
@@ -271,6 +278,13 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                   radius={[4, 4, 0, 0]}
                   cursor="pointer"
                   isAnimationActive={false}
+                  onClick={(entry: any) => {
+                    if (entry && entry.month) {
+                      setSelectedMonth(entry.month);
+                      setActiveSubTab('completed');
+                      setExpandedTournament(null);
+                    }
+                  }}
                 >
                   <LabelList
                     dataKey="completed"
@@ -300,6 +314,13 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                   radius={[4, 4, 0, 0]}
                   cursor="pointer"
                   isAnimationActive={false}
+                  onClick={(entry: any) => {
+                    if (entry && entry.month) {
+                      setSelectedMonth(entry.month);
+                      setActiveSubTab('uncompleted');
+                      setExpandedTournament(null);
+                    }
+                  }}
                 >
                   <LabelList
                     dataKey="uncompletedCumulative"
@@ -328,182 +349,302 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
           </div>
         </div>
 
-        {/* 3. 특정 월 기준 미완료 대회 목록 (차트 카드 내부 서랍 형태로 내포) */}
+        {/* 3. 특정 월 기준 대회 목록 (완료/미완료 서브 탭 + 인라인 아코디언 카드) */}
         {selectedMonth !== null && (
-          <div className="border-t border-slate-200 bg-slate-50/70 p-5 sm:p-6 transition-all">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></div>
-              <h3 className="font-bold text-slate-900 text-base">
-                2026년 {selectedMonth}월 기준 미완료 대회
-                <span className="text-orange-600 ml-1.5 font-bold">
-                  (누적 {uncompletedList.length}건)
-                </span>
-              </h3>
+          <div className="border-t border-slate-200 bg-slate-50/70 p-4 sm:p-6 transition-all">
+            {/* 서브 탭 & 카운트 요약 헤더 */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    activeSubTab === 'completed'
+                      ? 'bg-emerald-500'
+                      : 'bg-orange-500 animate-pulse'
+                  }`}
+                />
+                <h3 className="font-bold text-slate-900 text-base">
+                  2026년 {selectedMonth}월 {activeSubTab === 'completed' ? '완료' : '미완료'} 대회
+                  <span
+                    className={`ml-1.5 font-bold ${
+                      activeSubTab === 'completed' ? 'text-emerald-600' : 'text-orange-600'
+                    }`}
+                  >
+                    ({activeSubTab === 'completed' ? `해당 월 ${completedList.length}건` : `누적 ${uncompletedList.length}건`})
+                  </span>
+                </h3>
+              </div>
+
+              {/* 완료 / 미완료 탭 토글 캡슐 */}
+              <div className="flex items-center bg-slate-200/80 p-1 rounded-lg text-xs font-semibold self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSubTab('completed');
+                    setExpandedTournament(null);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                    activeSubTab === 'completed'
+                      ? 'bg-white text-emerald-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>완료 ({completedList.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSubTab('uncompleted');
+                    setExpandedTournament(null);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                    activeSubTab === 'uncompleted'
+                      ? 'bg-white text-orange-700 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-orange-600" />
+                  <span>미완료 ({uncompletedList.length})</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-2.5">
-              {uncompletedList.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-lg border border-slate-200 text-slate-500 text-sm">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                  2026년 {selectedMonth}월까지 누적된 미완료 대회가 없습니다.
+            {/* 대회 목록 아코디언 카드 리스트 */}
+            <div className="space-y-3">
+              {currentList.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl border border-slate-200 text-slate-500 text-sm">
+                  {activeSubTab === 'completed' ? (
+                    <>
+                      <Clock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      2026년 {selectedMonth}월에 완료된 대회가 없습니다.
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                      2026년 {selectedMonth}월까지 누적된 미완료 대회가 없습니다.
+                    </>
+                  )}
                 </div>
               ) : (
-                uncompletedList.map((item, idx) => (
-                  <button
-                    type="button"
-                    key={`${item.tournament.대회명}-${idx}`}
-                    onClick={() => setDetailModalItem(item)}
-                    className="w-full text-left bg-white border border-slate-200 hover:border-blue-400 hover:shadow-sm hover:bg-slate-50/50 rounded-lg p-3.5 flex items-center justify-between gap-3 transition cursor-pointer group"
-                  >
-                    <div className="space-y-1 flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-medium">
-                          {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
-                        </span>
-                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
-                          {item.tournament.라운드}
-                        </span>
-                        <span className="text-xs text-slate-400">
-                          종료일: {item.tournament.종료일}
-                        </span>
-                      </div>
+                currentList.map((item) => {
+                  const isExpanded = expandedTournament === item.tournament.대회명;
 
-                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">
-                        {item.tournament.대회명}
-                      </h4>
+                  return (
+                    <div
+                      key={item.tournament.대회명}
+                      className={`border rounded-xl transition duration-150 overflow-hidden ${
+                        isExpanded
+                          ? 'border-blue-500 shadow-md bg-white'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      {/* 대회 헤더 행 (클릭하여 아코디언 토글) */}
+                      <div
+                        onClick={() =>
+                          setExpandedTournament(isExpanded ? null : item.tournament.대회명)
+                        }
+                        className="p-4 cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none hover:bg-slate-50"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                              {item.tournament.라운드}
+                            </span>
+                            <h4 className="font-bold text-slate-900 text-sm">
+                              {item.tournament.대회명}
+                            </h4>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-400">
+                            <span className="text-slate-600 font-medium">
+                              {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
+                            </span>
+                            <span>·</span>
+                            <span>{item.tournament.리그}</span>
+                            <span>·</span>
+                            <span>{item.tournament.시작일} ~ {item.tournament.종료일}</span>
+                          </div>
+                        </div>
 
-                      <div className="text-xs text-orange-700 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>
-                          상태: 결과 미입력
-                          {item.needCheck && (
-                            <strong className="ml-1 text-red-600 font-semibold">
-                              (기준일 경과 후 결과 미입력 - 확인 필요)
-                            </strong>
+                        <div className="flex items-center gap-3 self-end sm:self-center">
+                          <span className="text-xs text-slate-500 font-medium">
+                            {item.tournament.종료일}
+                          </span>
+
+                          {item.isCompleted ? (
+                            <span className="bg-emerald-50 text-emerald-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
+                              완료
+                            </span>
+                          ) : item.needCheck ? (
+                            <span className="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-orange-200">
+                              확인 필요
+                            </span>
+                          ) : (
+                            <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                              미완료
+                            </span>
                           )}
-                        </span>
-                      </div>
-                    </div>
 
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-                  </button>
-                ))
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-slate-500" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 아코디언 확장 영역 (대회 상세 정보 & 입상자) */}
+                      {isExpanded && (
+                        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/60 space-y-4 text-xs">
+                          {/* 상세 그리드 메타데이터 */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-slate-400 block font-medium">대회명</span>
+                                <span className="font-bold text-slate-900 text-sm">
+                                  {item.tournament.대회명}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">개최일정</span>
+                                <span className="font-semibold text-slate-800">
+                                  {item.tournament.시작일} ~ {item.tournament.종료일}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">개인전/단체전 구분</span>
+                                <span className="font-semibold text-slate-800">
+                                  {item.groupTeams > 0 && item.individualTeams > 0
+                                    ? '단체전 / 개인전 병행'
+                                    : item.groupTeams > 0
+                                    ? '단체전'
+                                    : item.individualTeams > 0
+                                    ? '개인전'
+                                    : '미확인'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-slate-400 block font-medium">리그 유형</span>
+                                <span className="font-semibold text-slate-800">
+                                  {item.tournament.리그}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">결과 입력 여부</span>
+                                <span className={`font-bold ${item.isCompleted ? 'text-blue-600' : 'text-orange-600'}`}>
+                                  {item.isCompleted ? '입력됨' : '미입력'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">관리/진행 상태</span>
+                                <span className={`font-bold ${item.needCheck ? 'text-red-600' : 'text-emerald-600'}`}>
+                                  {item.isCompleted ? '완료' : item.needCheck ? '확인 필요' : '예정 (정상)'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-slate-400 block font-medium">개최 지역</span>
+                                <span className="font-semibold text-slate-800">
+                                  {item.tournament.시도} / {item.tournament.시군구 || `${item.tournament.시도} (시군구 미기재, 시도명으로 표시)`}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">참가팀 수</span>
+                                <span className="font-bold text-slate-900">
+                                  {item.totalTeams > 0
+                                    ? `총 ${item.totalTeams}팀 (단체 ${item.groupTeams}팀, 개인 ${item.individualTeams}팀)`
+                                    : '미입력 (데이터 없음)'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block font-medium">취소 여부</span>
+                                <span className="text-slate-400 font-medium">데이터 없음</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 입상팀 / 입상자 정보 테이블 */}
+                          <div className="bg-white rounded-xl border border-slate-200 p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                <Trophy className="w-4 h-4 text-amber-500" />
+                                <span>입상팀 / 입상자 명단</span>
+                              </h5>
+                              <span className="text-slate-400">
+                                총 {item.rankings.length}건 등록
+                              </span>
+                            </div>
+
+                            {item.rankings.length === 0 ? (
+                              <div className="py-6 text-center text-slate-400 bg-slate-50 rounded-lg">
+                                결과 데이터가 등록되지 않았습니다.
+                              </div>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs whitespace-nowrap">
+                                  <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
+                                    <tr>
+                                      <th className="py-2 px-3">순위</th>
+                                      <th className="py-2 px-3">종목</th>
+                                      <th className="py-2 px-3">연령/급수</th>
+                                      <th className="py-2 px-3">참가팀수</th>
+                                      <th className="py-2 px-3">소속 1 (선수 1)</th>
+                                      <th className="py-2 px-3">소속 2 (선수 2)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {item.rankings.map((r, i) => (
+                                      <tr key={i} className="hover:bg-slate-50/80">
+                                        <td className="py-2.5 px-3">
+                                          <span className={`px-2 py-0.5 rounded font-bold ${
+                                            r.순위.includes('1')
+                                              ? 'bg-amber-100 text-amber-800'
+                                              : r.순위.includes('2')
+                                              ? 'bg-slate-200 text-slate-800'
+                                              : 'bg-orange-100 text-orange-800'
+                                          }`}>
+                                            {r.순위}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                          {r.종목}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-600">
+                                          {r.연령} {r.급수}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-500">
+                                          {r.참가팀수}팀
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-700">
+                                          <span className="font-medium text-slate-900">{r.소속1 || '-'}</span>
+                                          {r.성명1 && <span className="text-slate-500 ml-1">({r.성명1})</span>}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-700">
+                                          <span className="font-medium text-slate-900">{r.소속2 || '-'}</span>
+                                          {r.성명2 && <span className="text-slate-500 ml-1">({r.성명2})</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
         )}
       </div>
-
-      {/* 대회 상세 모달 */}
-      {detailModalItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                  {detailModalItem.tournament.리그}
-                </span>
-                <span className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                  {detailModalItem.tournament.라운드}
-                </span>
-              </div>
-              <button
-                onClick={() => setDetailModalItem(null)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="my-4">
-              <h3 className="text-lg font-bold text-slate-900">
-                {detailModalItem.tournament.대회명}
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>
-                  {detailModalItem.tournament.시도} {detailModalItem.tournament.시군구}
-                </span>
-                <span>·</span>
-                <Calendar className="w-3.5 h-3.5" />
-                <span>
-                  {detailModalItem.tournament.시작일} ~ {detailModalItem.tournament.종료일}
-                </span>
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4 bg-slate-50 p-4 rounded-xl text-xs">
-              <div>
-                <span className="text-slate-400 block">진행 상태</span>
-                <strong className={detailModalItem.isCompleted ? 'text-emerald-600' : 'text-orange-600'}>
-                  {detailModalItem.isCompleted ? '완료' : '미완료'}
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block">결과 입력 여부</span>
-                <strong className={detailModalItem.isCompleted ? 'text-blue-600' : 'text-slate-600'}>
-                  {detailModalItem.isCompleted ? '입력됨' : '미입력'}
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block">관리 상태</span>
-                <strong className={detailModalItem.needCheck ? 'text-red-600 font-bold' : 'text-emerald-600 font-medium'}>
-                  {detailModalItem.needCheck ? '확인 필요' : '정상 진행'}
-                </strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block">총 참가팀</span>
-                <strong className="text-slate-900">
-                  {detailModalItem.totalTeams > 0 ? `${detailModalItem.totalTeams}팀` : '데이터 없음'}
-                </strong>
-              </div>
-            </div>
-
-            {/* 입상 정보 */}
-            <div>
-              <h4 className="font-bold text-sm text-slate-900 mb-2">입상팀 / 순위 정보</h4>
-              {detailModalItem.rankings.length === 0 ? (
-                <div className="text-center py-6 bg-slate-50 rounded-lg text-slate-400 text-xs">
-                  등록된 결과 데이터(선수 순위)가 없습니다.
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-56 overflow-y-auto text-xs">
-                  {detailModalItem.rankings.map((r, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded font-bold ${
-                          r.순위.includes('1') ? 'bg-amber-100 text-amber-800' :
-                          r.순위.includes('2') ? 'bg-slate-200 text-slate-800' :
-                          'bg-orange-100 text-orange-800'
-                        }`}>
-                          {r.순위}
-                        </span>
-                        <span className="font-medium text-slate-800">{r.소속1 || '무소속'}</span>
-                        <span className="text-slate-500 font-normal">({r.성명1 || '선수명 없음'})</span>
-                      </div>
-                      <div className="text-slate-400 text-right">
-                        <span>{r.종목}</span> · <span>{r.연령}</span> · <span>{r.급수}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setDetailModalItem(null)}
-                className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
