@@ -88,7 +88,7 @@ export const ParticipationStatus: React.FC<ParticipationStatusProps> = ({
   }, [sidoTeamCounts]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2.5 sm:space-y-4 md:space-y-6">
       {/* 리그 선택만 깔끔하게 유지 (가운데 정렬) */}
       <div className="flex justify-center">
         <div className="flex bg-slate-200/80 p-1 rounded-lg text-xs font-semibold">

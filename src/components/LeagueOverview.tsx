@@ -114,41 +114,43 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
               type="button"
               key={name}
               onClick={() => onSelectLeague(name)}
-              className={`rounded-t-xl sm:rounded-t-2xl p-2.5 sm:p-3.5 md:p-4 transition-all duration-200 ${
+              className={`rounded-t-xl sm:rounded-t-2xl p-2 sm:p-3.5 md:p-4 transition-all duration-200 ${
                 isSelected
-                  ? 'bg-white border-x border-t border-slate-300 border-b-2 border-b-white border-t-[3px] border-t-blue-600 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.05)] pb-2.5 sm:pb-3 md:pb-3.5 relative z-20'
-                  : 'bg-slate-100/75 hover:bg-slate-50/90 border border-slate-200/80 text-slate-500 hover:text-slate-700 pb-2.5 sm:pb-3 md:pb-3.5 relative z-10'
+                  ? 'bg-white border-x border-t border-slate-300 border-b-2 border-b-white border-t-[3px] border-t-blue-600 shadow-[0_-4px_12px_-2px_rgba(0,0,0,0.05)] pb-2 sm:pb-3 md:pb-3.5 relative z-20'
+                  : 'bg-slate-100/75 hover:bg-slate-50/90 border border-slate-200/80 text-slate-500 hover:text-slate-700 pb-2 sm:pb-3 md:pb-3.5 relative z-10'
               }`}
+
             >
-              {/* 모바일 화면 (< sm): 컴팩트 3줄 중앙 정렬 (진행도 + 수치 통합 표기) */}
-              <div className="sm:hidden flex flex-col items-center justify-between w-full">
-                {/* 상단: 아이콘 + 리그명 */}
-                <div className="flex items-center justify-center space-x-1.5 w-full">
-                  <div className={`p-1 rounded-md ${isSelected ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <h3 className={`font-bold text-xs leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
-                    {name}
-                  </h3>
+              {/* 모바일 화면 (< sm): 슬림 2줄 레이아웃 (1행: 리그명 + 미완료 뱃지 / 2행: 진행도 + 모수) */}
+              <div className="sm:hidden flex flex-col items-center justify-center w-full py-0.5">
+                {/* 1행: 리그명 + 미완료 알림 뱃지 */}
+                <div className="flex items-center justify-center gap-1.5 w-full whitespace-nowrap">
+                  <span className={`font-bold text-xs leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-600'}`}>
+                    {name.replace('리그', '')}
+                  </span>
+                  <span
+                    title={`미완료 ${stat.uncompleted}건`}
+                    className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0 ${
+                      isSelected
+                        ? 'bg-orange-500 text-white shadow-xs'
+                        : 'bg-orange-100 text-orange-700'
+                    }`}
+                  >
+                    {stat.uncompleted}
+                  </span>
                 </div>
 
-                {/* 중단: 진행도 + (완료 / 전체) 통합 표기 */}
-                <div className="flex flex-wrap items-baseline justify-center gap-1 my-0.5 w-full">
-                  <span className={`text-sm font-bold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-800'}`}>
+                {/* 2행: 진행도 + (완료 / 전체) 통합 표기 */}
+                <div className="flex items-baseline justify-center gap-1 mt-1 w-full whitespace-nowrap">
+                  <span className={`text-xs font-extrabold tracking-tight ${isSelected ? 'text-blue-600' : 'text-slate-800'}`}>
                     {stat.rate}%
                   </span>
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    ({stat.completed} / {stat.total})
-                  </span>
-                </div>
-
-                {/* 하단: 미완료 수치 */}
-                <div className="text-[10px] text-center w-full">
-                  <span className={isSelected ? 'text-orange-600 font-semibold' : 'text-slate-500'}>
-                    미완료 {stat.uncompleted}
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    ({stat.completed}/{stat.total})
                   </span>
                 </div>
               </div>
+
 
               {/* 넓은 화면 (>= sm): 기존 분리 레이아웃 유지 (진행률 분리 + 프로그레스바 + 완료/전체/미완료 가로 정렬, 여백 슬림화 적용) */}
               <div className="hidden sm:block w-full text-left">
@@ -198,32 +200,33 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
 
       {/* 2 & 3. 통합 메인 컨테이너 (차트 + 하위 미완료 대회 서랍) */}
       <div className="bg-white rounded-t-none rounded-b-2xl border border-slate-300 shadow-sm overflow-hidden relative z-0">
-        {/* 2. 월별 진행상황 차트 영역 */}
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-base">
+        {/* 2. 월별 진행상황 차트 영역 (모바일 여백 슬림화 및 높이 축소) */}
+        <div className="py-3 px-3.5 sm:p-6">
+          <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1.5 sm:gap-2">
+            <h3 className="font-bold text-slate-900 text-sm sm:text-base">
               월별 진행상황
             </h3>
 
-            <div className="flex items-center gap-4 text-xs font-medium">
+            <div className="flex items-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-medium">
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-emerald-600"></span>
                 <span className="text-slate-700">완료(해당 월)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-orange-500"></span>
+                <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded bg-orange-500"></span>
                 <span className="text-slate-700">미완료(누적)</span>
               </div>
             </div>
           </div>
 
-          <div className="h-72 w-full mt-4 cursor-pointer [&_.recharts-surface]:cursor-pointer [&_.recharts-tooltip-cursor]:cursor-pointer">
+          <div className="h-52 sm:h-64 md:h-72 w-full mt-2.5 sm:mt-4 cursor-pointer [&_.recharts-surface]:cursor-pointer [&_.recharts-tooltip-cursor]:cursor-pointer">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={monthlyData}
                 onClick={handleBarClick}
-                margin={{ top: 28, right: 20, left: -15, bottom: 5 }}
+                margin={{ top: 24, right: 12, left: -18, bottom: 2 }}
               >
+
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 {selectedMonth !== null && (
                   <ReferenceArea
@@ -438,59 +441,65 @@ export const LeagueOverview: React.FC<LeagueOverviewProps> = ({
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
-                      {/* 대회 헤더 행 (클릭하여 아코디언 토글) */}
+                      {/* 대회 헤더 행 (클릭하여 아코디언 토글 - 모바일 깨짐 방지 레이아웃) */}
                       <div
                         onClick={() =>
                           setExpandedTournament(isExpanded ? null : item.tournament.대회명)
                         }
-                        className="p-4 cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none hover:bg-slate-50"
+                        className="p-3 sm:p-4 cursor-pointer select-none hover:bg-slate-50 transition"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                        {/* 1행: [라운드 뱃지] + [대회명] ──── [상태 뱃지] + [펼치기 아이콘] */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-1.5 sm:gap-2 flex-1 min-w-0">
+                            <span className="text-[11px] sm:text-xs font-bold text-blue-700 bg-blue-50 px-1.5 sm:px-2 py-0.5 rounded shrink-0 whitespace-nowrap mt-0.5">
                               {item.tournament.라운드}
                             </span>
-                            <h4 className="font-bold text-slate-900 text-sm">
+                            <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug break-keep">
                               {item.tournament.대회명}
                             </h4>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-400">
+
+                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                            {item.isCompleted ? (
+                              <span className="bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-emerald-200 whitespace-nowrap">
+                                완료
+                              </span>
+                            ) : item.needCheck ? (
+                              <span className="bg-orange-100 text-orange-800 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-orange-200 whitespace-nowrap">
+                                확인 필요
+                              </span>
+                            ) : (
+                              <span className="bg-slate-100 text-slate-600 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                                미완료
+                              </span>
+                            )}
+
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 2행: [지역 · 리그 · 일정] ──── [종료일] */}
+                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] sm:text-xs text-slate-400 mt-2 pt-1.5 border-t border-slate-100 sm:border-t-0 sm:pt-0">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
                             <span className="text-slate-600 font-medium">
                               {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
                             </span>
                             <span>·</span>
                             <span>{item.tournament.리그}</span>
-                            <span>·</span>
-                            <span>{item.tournament.시작일} ~ {item.tournament.종료일}</span>
+                            <span className="hidden xs:inline">·</span>
+                            <span className="hidden xs:inline">{item.tournament.시작일} ~ {item.tournament.종료일}</span>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-3 self-end sm:self-center">
-                          <span className="text-xs text-slate-500 font-medium">
-                            {item.tournament.종료일}
+                          <span className="text-slate-500 font-mono text-[11px] shrink-0">
+                            종료: {item.tournament.종료일}
                           </span>
-
-                          {item.isCompleted ? (
-                            <span className="bg-emerald-50 text-emerald-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
-                              완료
-                            </span>
-                          ) : item.needCheck ? (
-                            <span className="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-orange-200">
-                              확인 필요
-                            </span>
-                          ) : (
-                            <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
-                              미완료
-                            </span>
-                          )}
-
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-slate-500" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-slate-500" />
-                          )}
                         </div>
                       </div>
+
 
                       {/* 아코디언 확장 영역 (대회 상세 정보 & 입상자) */}
                       {isExpanded && (

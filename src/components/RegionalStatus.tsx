@@ -168,7 +168,7 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2.5 sm:space-y-4 md:space-y-6">
       {/* 리그 선택 (가운데 정렬) */}
       <div className="flex justify-center">
         <div className="flex bg-slate-200/80 p-1 rounded-lg text-xs font-semibold">
@@ -190,9 +190,9 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
 
       {/* 표 컨테이너 (선택 hierarchy가 표의 제목) */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* 표 제목: 선택 hierarchy 네비게이션 */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg font-bold">
+        {/* 표 제목: 선택 hierarchy 네비게이션 (모바일 글자 크기 및 위아래 여백 축소) */}
+        <div className="py-2.5 px-3.5 sm:py-3.5 sm:px-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base font-bold">
             <button
               type="button"
               onClick={() => {
@@ -211,7 +211,7 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
 
             {selectedSido && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -231,12 +231,13 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
 
             {selectedSgg && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
                 <span className="text-slate-900">{selectedSgg}</span>
               </>
             )}
           </div>
         </div>
+
 
         {/* 1단계: 시·도 목록 화면 */}
         {!selectedSido && (
@@ -409,55 +410,65 @@ export const RegionalStatus: React.FC<RegionalStatusProps> = ({
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  {/* 대회 헤더 행 (클릭하여 토글) */}
+                  {/* 대회 헤더 행 (클릭하여 아코디언 토글 - 모바일 깨짐 방지 레이아웃) */}
                   <div
                     onClick={() =>
                       setExpandedTournament(isExpanded ? null : item.tournament.대회명)
                     }
-                    className="p-4 cursor-pointer flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none hover:bg-slate-50"
+                    className="p-3 sm:p-4 cursor-pointer select-none hover:bg-slate-50 transition"
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                    {/* 1행: [라운드 뱃지] + [대회명] ──── [상태 뱃지] + [펼치기 아이콘] */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-1.5 sm:gap-2 flex-1 min-w-0">
+                        <span className="text-[11px] sm:text-xs font-bold text-blue-700 bg-blue-50 px-1.5 sm:px-2 py-0.5 rounded shrink-0 whitespace-nowrap mt-0.5">
                           {item.tournament.라운드}
                         </span>
-                        <h4 className="font-bold text-slate-900 text-sm">
+                        <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug break-keep">
                           {item.tournament.대회명}
                         </h4>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <span>{item.tournament.리그}</span>
-                        <span>·</span>
-                        <span>{item.tournament.시작일} ~ {item.tournament.종료일}</span>
+
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        {item.isCompleted ? (
+                          <span className="bg-emerald-50 text-emerald-700 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-emerald-200 whitespace-nowrap">
+                            완료
+                          </span>
+                        ) : item.needCheck ? (
+                          <span className="bg-orange-100 text-orange-800 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-bold border border-orange-200 whitespace-nowrap">
+                            확인 필요
+                          </span>
+                        ) : (
+                          <span className="bg-slate-100 text-slate-600 text-[11px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                            미완료
+                          </span>
+                        )}
+
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 self-end sm:self-center">
-                      <span className="text-xs text-slate-500 font-medium">
-                        {item.tournament.종료일}
+                    {/* 2행: [지역 · 리그 · 일정] ──── [종료일] */}
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] sm:text-xs text-slate-400 mt-2 pt-1.5 border-t border-slate-100 sm:border-t-0 sm:pt-0">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                        <span className="text-slate-600 font-medium">
+                          {item.tournament.시도} {item.tournament.시군구 && `/ ${item.tournament.시군구}`}
+                        </span>
+                        <span>·</span>
+                        <span>{item.tournament.리그}</span>
+                        <span className="hidden xs:inline">·</span>
+                        <span className="hidden xs:inline">{item.tournament.시작일} ~ {item.tournament.종료일}</span>
+                      </div>
+
+                      <span className="text-slate-500 font-mono text-[11px] shrink-0">
+                        종료: {item.tournament.종료일}
                       </span>
-
-                      {item.isCompleted ? (
-                        <span className="bg-emerald-50 text-emerald-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
-                          완료
-                        </span>
-                      ) : item.needCheck ? (
-                        <span className="bg-orange-100 text-orange-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-orange-200">
-                          확인 필요
-                        </span>
-                      ) : (
-                        <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
-                          미완료
-                        </span>
-                      )}
-
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-slate-500" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-500" />
-                      )}
                     </div>
                   </div>
+
 
                   {/* 아코디언 확장 영역 (대회 상세 정보 & 입상자) */}
                   {isExpanded && (

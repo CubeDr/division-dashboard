@@ -267,37 +267,38 @@ export const KoreaMap: React.FC<KoreaMapProps> = ({
 
   return (
     <div className="flex flex-col lg:flex-row gap-5 xl:gap-6 items-start lg:items-stretch">
-      {/* 1. 지도 영역 (독립 카드) */}
-      <div className="relative w-full lg:w-[460px] xl:w-[480px] flex flex-col items-center justify-center bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
+      {/* 1. 지도 영역 (독립 카드 - 모바일 지도 크기 적정화) */}
+      <div className="relative w-full lg:w-[460px] xl:w-[480px] flex flex-col items-center justify-center bg-white p-2.5 sm:p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
           {/* 지도 오른쪽 상단 세로형 범례 오버레이 */}
-          <div className="absolute top-3 right-3 flex flex-col gap-1.5 text-xs text-slate-600 bg-white/95 backdrop-blur-xs px-2.5 py-2 rounded-xl border border-slate-200 shadow-2xs z-10 select-none">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#0284c7] shrink-0"></span>
+          <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-slate-600 bg-white/95 backdrop-blur-xs px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 shadow-2xs z-10 select-none">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#0284c7] shrink-0"></span>
               <span className="font-bold text-slate-800">70+</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0"></span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#38bdf8] shrink-0"></span>
               <span className="font-medium text-slate-700">40~69</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#7dd3fc] shrink-0"></span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#7dd3fc] shrink-0"></span>
               <span className="font-medium text-slate-700">20~39</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#bae6fd] shrink-0"></span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#bae6fd] shrink-0"></span>
               <span className="font-medium text-slate-700">1~19</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#f1f5f9] border border-slate-300 shrink-0"></span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#f1f5f9] border border-slate-300 shrink-0"></span>
               <span className="text-slate-400 font-medium">0</span>
             </div>
           </div>
 
           <svg
             viewBox={koreaMapData.viewBox}
-            className="w-full h-auto drop-shadow-sm select-none"
+            className="w-full max-w-[280px] sm:max-w-[360px] lg:max-w-none h-auto drop-shadow-sm select-none mx-auto"
             style={{ maxHeight: '740px' }}
           >
+
             {/* 1. 각 시도 경계선 패스 */}
             {koreaMapData.locations.map((loc: any) => {
               const krName = loc.krName;
